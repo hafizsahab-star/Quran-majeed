@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#075e46">
+<title>Quran Majeed | Al-Sudais</title>
+<style>
+:root{--green:#087f5b;--bg:#f4f7f2;--ink:#17352b;--card:#fff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,"Noto Naskh Arabic",serif}
+header{background:linear-gradient(120deg,#064e3b,#0b8060);color:white;padding:22px 16px;text-align:center}
+h1{margin:0;font-size:26px}.sub{opacity:.9;font-size:14px;margin-top:5px}
+main{max-width:850px;margin:auto;padding:14px}
+.toolbar,.player,.legend,.surah{background:var(--card);border-radius:14px;padding:14px;margin:12px 0;box-shadow:0 2px 12px #1231}
+select,input,button{font:inherit;border-radius:10px;padding:10px;border:1px solid #cbd5ce;background:white;color:var(--ink)}
+select,input{width:100%;margin:5px 0 10px}button{background:var(--green);color:white;border:0;cursor:pointer}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row button{flex:1}
+#quran{line-height:2.25}.surah h2{text-align:center;color:var(--green);margin:4px}
+.bism{font-size:26px;text-align:center;direction:rtl;margin:12px}
+.ayah{display:inline;font-size:25px;direction:rtl;unicode-bidi:plaintext;margin:0 2px}
+.num{font-size:13px;color:#64748b;white-space:nowrap}
+.arabic{font-family:"Noto Naskh Arabic","Amiri",serif;text-align:right;direction:rtl}
+.ghunna{color:#159447;font-weight:700}.ikhfa{color:#1676d2;font-weight:700}
+small,.note{color:#64748b;font-size:12px}.legend span{font-weight:700;margin-right:15px}
+audio{width:100%;margin-top:8px} .hidden{display:none}
+</style></head>
+<body>
+<header><h1>القرآن الكريم</h1><div class="sub">Quran Majeed • Sheikh Abdul Rahman Al-Sudais</div></header>
+<main>
+<section class="toolbar">
+<label for="surah">Surah select karein</label><select id="surah"><option>Loading Surahs…</option></select>
+<div class="row"><button id="load">Surah kholein</button><button id="prev">Pichli</button><button id="next">Agli</button></div>
+<label for="search">Ayat / Arabic text search (loaded Surah)</label><input id="search" placeholder="Search…">
+</section>
+<section class="legend"><b>Tajweed color guide</b><p><span class="ghunna">■ Ghunna</span><span class="ikhfa">■ Ikhfa</span></p><small>Rang rule-detection ki madad ke liye hain; tajweed ki durust adaigi ke liye qualified Qari se tasdeeq karein.</small></section>
+<section class="player"><b>Tilawat — Abdul Rahman Al-Sudais</b><audio id="audio" controls preload="none"></audio><div class="note">Audio internet ke zariye stream hoti hai. Agar audio na chale to connection ya source availability check karein.</div></section>
+<section id="quran" class="surah"><p>Quran load ho raha hai…</p></section>
+<p class="note">Yeh online HTML reader hai. Quran text aur audio internet se load hotay hain; offline istemal ke liye data download aur licensing ki alag zaroorat ho sakti hai.</p>
+</main>
+<script>
+const api='https://api.alquran.cloud/v1';
+const sel=document.querySelector('#surah'),box=document.querySelector('#quran'),audio=document.querySelector('#audio');
+let chapters=[],current=1,allAyahs=[];
+async function init(){try{let r=await fetch(api+'/surah');if(!r.ok)throw Error();let j=await r.json();chapters=j.data;sel.innerHTML=chapters.map(s=>`<option value="${s.number}">${s.number}. ${s.englishName} — ${s.name}</option>`).join('');await show(1)}catch(e){box.innerHTML='<p>Surah list load nahi hui. Internet connection check karke page refresh karein.</p>'}}
+function colorize(t){
+ // Visual learning aid only: highlights common written signs; not a certified tajweed parser.
+ t=t.replace(/([نم][ّ])/g,'<span class="ghunna">$1</span>');
+ const ikhfaLetters='تثجدذزسشصضطظفقك';
+ const pattern=new RegExp('(ن[ْ]?)(['+ikhfaLetters+'])','g');
+ t=t.replace(pattern,'<span class="ikhfa">$1$2</span>');
+ return t;
+}
+async function show(n){current=Number(n);sel.value=current;box.innerHTML='<p>Surah load ho rahi hai…</p>';try{
+ const r=await fetch(`${api}/surah/${current}/quran-uthmani`);if(!r.ok)throw Error();const j=await r.json();allAyahs=j.data.ayahs;
+ const s=chapters[current-1];let out=`<h2>${s.name} • ${s.englishName}</h2><div class="note" style="text-align:center">${s.englishNameTranslation} • ${s.numberOfAyahs} Ayat</div>`;
+ if(current!==1&&current!==9)out+='<div class="bism arabic">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>';
+ out+='<div class="arabic" id="verses">'+allAyahs.map(a=>`<span class="ayah" data-search="${a.text}">${colorize(a.text)} <span class="num">۞${a.numberInSurah}</span></span>`).join(' ')+'</div>';
+ box.innerHTML=out;
+ audio.src=`https://everyayah.com/data/Abdurrahmaan_As-Sudais_192kbps/${String(current).padStart(3,'0')}.mp3`;audio.load();
+ }catch(e){box.innerHTML='<p>Surah load nahi hui. Kuch dair baad dobara koshish karein.</p>'}}
+document.querySelector('#load').onclick=()=>show(sel.value);
+document.querySelector('#prev').onclick=()=>show(Math.max(1,current-1));
+document.querySelector('#next').onclick=()=>show(Math.min(114,current+1));
+document.querySelector('#search').addEventListener('input',e=>{let q=e.target.value.trim();document.querySelectorAll('.ayah').forEach(x=>x.style.background=q&&x.dataset.search.includes(q)?'#fff0ad':'transparent')});
+init();
+</script></body></html>
